@@ -8,6 +8,10 @@ from src.parse_fields import (
     parse_crash_fields
 )
 
+from src.excel_export import (
+    export_to_excel
+)
+
 
 PDF_PATH = "input_pdfs/sample.pdf"
 
@@ -26,3 +30,7 @@ parsed_data = parse_crash_fields(text)
 print("\n===== PARSED STRUCTURED DATA =====\n")
 
 pprint(parsed_data)
+
+records = [parsed_data]
+
+export_to_excel(records)
