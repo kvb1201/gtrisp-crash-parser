@@ -2,7 +2,9 @@
 
 Hybrid PDF + OCR based crash report extraction pipeline.
 
-## Features
+---
+
+# Features
 
 - PDF text extraction
 - OCR fallback extraction
@@ -10,11 +12,12 @@ Hybrid PDF + OCR based crash report extraction pipeline.
 - Structured field parsing
 - Excel export
 - Batch PDF processing
+- Multi-report batch dataset generation
+- Combined Excel + CSV exports
 
+---
 
-# G-TRISP Crash Report Parser
-
-## Overview
+# Overview
 
 G-TRISP Crash Report Parser is a hybrid document-processing pipeline designed to extract structured road accident data from crash-report PDFs.
 
@@ -23,7 +26,9 @@ The system combines:
 - OCR-based scanned document recovery
 - Regex-based deterministic parsing
 - NLP-assisted fuzzy matching
-- Structured Excel export
+- Section-aware parsing
+- Multiline semantic reconstruction
+- Structured Excel + CSV export
 
 The final output is a clean analytics-ready dataset along with a human-readable formatted crash report.
 
@@ -35,6 +40,8 @@ Road accident reports are often stored as:
 - unstructured PDFs
 - scanned documents
 - inconsistent report layouts
+- OCR-corrupted records
+- semi-structured tables
 
 Manual extraction of accident information into structured datasets is:
 - slow
@@ -50,15 +57,20 @@ This project automates the extraction and structuring of crash-report informatio
 ## Dual Extraction Pipeline
 - `pdfplumber` extraction for digital PDFs
 - OCR extraction using `Tesseract` for scanned PDFs
+- Hybrid extraction fusion for robustness
 
 ## Hybrid Parsing Engine
-- Regex-based field extraction
+- Regex-based deterministic extraction
 - RapidFuzz NLP-assisted fallback recovery
-- Robust against OCR inconsistencies
+- Section-aware generic parsing
+- Multiline field reconstruction
+- OCR-noise handling and validation
 
 ## Structured Outputs
 - Analytics-ready dataset export
 - Human-readable formatted report export
+- CSV export support
+- Multi-report aggregation
 
 ## Professional Excel Export
 - Multi-sheet Excel workbook
@@ -72,40 +84,52 @@ This project automates the extraction and structuring of crash-report informatio
 # System Architecture
 
 ```text
-                ┌─────────────────┐
-                │   Input PDF     │
-                └────────┬────────┘
-                         │
-          ┌──────────────┴──────────────┐
-          │                             │
-          ▼                             ▼
- ┌────────────────┐           ┌────────────────┐
- │ pdfplumber     │           │ OCR Extraction │
- │ Text Extraction│           │ (Tesseract)    │
- └────────┬───────┘           └────────┬───────┘
-          │                             │
-          └──────────────┬──────────────┘
-                         ▼
-              ┌──────────────────┐
-              │ Combined Text     │
-              └────────┬─────────┘
-                       ▼
-             ┌────────────────────┐
-             │ Regex Parsing      │
-             └────────┬──────────┘
-                      ▼
-           ┌────────────────────────┐
-           │ NLP Fuzzy Recovery     │
-           │ (RapidFuzz Fallback)   │
-           └────────┬──────────────┘
-                    ▼
-          ┌─────────────────────────┐
-          │ Structured Dictionary    │
-          └────────┬────────────────┘
+                    ┌─────────────────┐
+                    │   Input PDF     │
+                    └────────┬────────┘
+                             │
+              ┌──────────────┴──────────────┐
+              │                             │
+              ▼                             ▼
+     ┌────────────────┐           ┌────────────────┐
+     │ pdfplumber     │           │ OCR Extraction │
+     │ Text Extraction│           │ (Tesseract)    │
+     └────────┬───────┘           └────────┬───────┘
+              │                             │
+              └──────────────┬──────────────┘
+                             ▼
+                  ┌──────────────────┐
+                  │ Combined Text     │
+                  └────────┬─────────┘
+                           ▼
+                 ┌────────────────────┐
+                 │ Regex Parsing      │
+                 └────────┬──────────┘
+                          ▼
+               ┌────────────────────────┐
+               │ NLP Fuzzy Recovery     │
+               │ (RapidFuzz Fallback)   │
+               └────────┬──────────────┘
+                        ▼
+            ┌─────────────────────────────┐
+            │ Section-Aware Parsing       │
+            └────────┬────────────────────┘
+                     ▼
+          ┌───────────────────────────────┐
+          │ Multiline Semantic Merging    │
+          └────────┬──────────────────────┘
                    ▼
-         ┌──────────────────────────┐
-         │ Excel Export Pipeline     │
-         └──────────────────────────┘
+        ┌─────────────────────────────────┐
+        │ Validation + Noise Filtering    │
+        └────────┬────────────────────────┘
+                 ▼
+      ┌───────────────────────────────────┐
+      │ Structured Dictionary Generation  │
+      └────────┬──────────────────────────┘
+               ▼
+     ┌────────────────────────────────────┐
+     │ Excel + CSV Export Pipeline        │
+     └────────────────────────────────────┘
 ```
 
 ---
@@ -116,10 +140,13 @@ This project automates the extraction and structuring of crash-report informatio
 gtrisp-crash-parser/
 │
 ├── input_pdfs/
-│   └── sample.pdf
+│   ├── sample1.pdf
+│   ├── sample2.pdf
+│   └── sample3.pdf
 │
 ├── outputs/
-│   └── crash_reports.xlsx
+│   ├── crash_reports.xlsx
+│   └── crash_reports.csv
 │
 ├── src/
 │   ├── extract_text.py
@@ -127,6 +154,7 @@ gtrisp-crash-parser/
 │   ├── pdf_processor.py
 │   ├── parse_fields.py
 │   ├── fusion_engine.py
+│   ├── batch_processor.py
 │   └── excel_export.py
 │
 ├── run.py
@@ -212,6 +240,45 @@ python run.py
 
 ---
 
+# Batch Processing Multiple Reports
+
+Place multiple crash-report PDFs inside:
+
+```text
+input_pdfs/
+```
+
+Example:
+
+```text
+input_pdfs/
+├── report1.pdf
+├── report2.pdf
+└── report3.pdf
+```
+
+Run:
+
+```bash
+python -m src.batch_processor
+```
+
+The pipeline will:
+- iterate through all PDFs
+- extract text using hybrid PDF + OCR processing
+- parse structured accident fields
+- combine all reports into a unified dataset
+- export analytics-ready Excel and CSV files
+
+Generated outputs:
+
+```text
+outputs/crash_reports.xlsx
+outputs/crash_reports.csv
+```
+
+---
+
 # Output Files
 
 ## Excel Output
@@ -220,6 +287,12 @@ Generated at:
 
 ```text
 outputs/crash_reports.xlsx
+```
+
+and
+
+```text
+outputs/crash_reports.csv
 ```
 
 Contains:
@@ -273,7 +346,7 @@ Human-readable vertical report format.
 
 # Parsing Strategy
 
-The system uses a layered extraction strategy:
+The system uses a layered extraction strategy.
 
 ## 1. Deterministic Regex Parsing
 Primary field extraction using controlled regex patterns.
@@ -284,20 +357,52 @@ RapidFuzz-based fuzzy matching helps recover:
 - formatting inconsistencies
 - partially corrupted labels
 
-This hybrid approach improves robustness while maintaining deterministic extraction quality.
+## 3. Section-Aware Generic Parsing
+The parser dynamically detects sections such as:
+- Accident Details
+- Vehicle Details
+- Driver Details
+- Road Details
+
+and extracts contextual label-value pairs.
+
+## 4. Multiline Semantic Reconstruction
+Broken PDF fields spanning multiple lines are reconstructed before parsing.
+
+## 5. Validation & Noise Filtering
+The parser removes:
+- malformed OCR fragments
+- duplicate semantic fields
+- invalid labels
+- noisy extractions
+
+This hybrid architecture improves robustness while maintaining deterministic extraction quality.
+
+---
+
+# Multi-Report Processing Support
+
+The parser architecture is stateless and modular, enabling:
+- iterative multi-report processing
+- combined dataset generation
+- scalable PDF ingestion
+- dynamic schema expansion
+- analytics-ready exports
+
+Each report is independently parsed and merged into a unified dataset pipeline.
 
 ---
 
 # Future Improvements
 
 Potential future upgrades:
-- batch folder ingestion
-- CSV export
 - SQLite database integration
 - FastAPI backend
 - dashboard visualization
 - confidence scoring
 - advanced NLP entity extraction
+- transformer-based document intelligence
+- hierarchical JSON schemas
 - multi-format crash report support
 
 ---
@@ -310,6 +415,9 @@ The system combines:
 - OCR
 - deterministic parsing
 - NLP-assisted recovery
+- section-aware parsing
+- multiline semantic reconstruction
+- validation-driven noise filtering
 - professional reporting exports
 
 to create a scalable and production-style crash-report processing workflow.

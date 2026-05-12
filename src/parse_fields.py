@@ -34,27 +34,6 @@ def normalize_key(label):
     return label
 
 
-GENERIC_LABEL_PATTERNS = [
-
-    r"^([A-Z][A-Za-z /&().?-]{3,50})\s*:\s*(.+)$",
-
-    r"^([A-Z][A-Za-z /&().?-]{3,50})\s{2,}(.+)$",
-]
-
-
-IGNORE_GENERIC_KEYS = {
-    "accident",
-    "driver",
-    "passenger",
-    "pedestrian",
-    "total",
-    "station",
-    "transport",
-    "vehicle details",
-    "driver details",
-    "road details",
-}
-
 CANONICAL_FIELDS = {
     "accident_id",
     "fir_number",
@@ -97,6 +76,59 @@ CANONICAL_FIELDS = {
     "mechanical_failure",
 }
 
+CANONICAL_LABEL_ALIASES = {
+    "fir_csr_number": "fir_number",
+    "fir_number": "fir_number",
+    "district_name": "district_name",
+    "station_name": "station_name",
+    "vehicle_type": "vehicle_type",
+    "vehicle_category": "vehicle_category",
+    "vehicle_class": "vehicle_class",
+    "weather_condition": "weather_condition",
+    "light_condition": "light_condition",
+    "collision_type": "collision_type",
+    "collision_nature": "collision_nature",
+    "traffic_violation": "traffic_violation",
+    "road_name_street_name": "road_name",
+    "road_name": "road_name",
+    "severity": "severity",
+    "fuel_type": "fuel_type",
+    "occupation": "occupation",
+    "education": "education",
+    "nationality": "nationality",
+}
+
+
+def resolve_canonical_alias(key):
+
+    normalized = normalize_key(key)
+
+    return CANONICAL_LABEL_ALIASES.get(
+        normalized,
+        normalized
+    )
+
+
+GENERIC_LABEL_PATTERNS = [
+
+    r"^([A-Z][A-Za-z /&().?-]{3,50})\s*:\s*(.+)$",
+
+    r"^([A-Z][A-Za-z /&().?-]{3,50})\s{2,}(.+)$",
+]
+
+
+IGNORE_GENERIC_KEYS = {
+    "accident",
+    "driver",
+    "passenger",
+    "pedestrian",
+    "total",
+    "station",
+    "transport",
+    "vehicle details",
+    "driver details",
+    "road details",
+}
 
 INVALID_LABEL_ENDINGS = {
     "of",
@@ -573,7 +605,7 @@ def parse_crash_fields(text):
             if len(value.split()) > 15:
                 continue
 
-            normalized_key = normalize_key(label)
+            normalized_key = resolve_canonical_alias(label)
 
             if normalized_key in CANONICAL_FIELDS:
                 continue
@@ -587,7 +619,11 @@ def parse_crash_fields(text):
 
             key_suffix = normalized_key.split("__")[-1]
 
-            if key_suffix in CANONICAL_FIELDS:
+            resolved_suffix = resolve_canonical_alias(
+                key_suffix
+            )
+
+            if resolved_suffix in CANONICAL_FIELDS:
                 continue
 
             duplicate_found = False
@@ -597,7 +633,15 @@ def parse_crash_fields(text):
                 if existing_value is None:
                     continue
 
-                if existing_value == value:
+                existing_clean = clean_value(
+                    str(existing_value)
+                ).lower()
+
+                current_clean = clean_value(
+                    str(value)
+                ).lower()
+
+                if existing_clean == current_clean:
                     duplicate_found = True
                     break
 
@@ -638,7 +682,11 @@ def parse_crash_fields(text):
 
             key_suffix = key.split("__")[-1]
 
-            if key_suffix in CANONICAL_FIELDS:
+            resolved_suffix = resolve_canonical_alias(
+                key_suffix
+            )
+
+            if resolved_suffix in CANONICAL_FIELDS:
                 extracted[key] = None
                 continue
 
